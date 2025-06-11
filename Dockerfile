@@ -7,4 +7,5 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-CMD ["python", "main.py"]
+# Portot nyitunk és háttérben elindítjuk a scraper-t, majd egy minimális HTTP szervert.
+CMD ["sh", "-c", "python main.py & python -m http.server 10000"]
