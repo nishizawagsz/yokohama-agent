@@ -2,36 +2,45 @@ from playwright.sync_api import sync_playwright
 import pandas as pd
 import datetime
 
-def fetch_listings():
-    url = "https://www.rentersnet.jp/search/area?city=14118&layout=4LDK"
-    listings = []
+# scraper URL-ek (most még csak homes.co.jp)
+urls = [
+    "https://www.homes.co.jp/chintai/kanagawa/list/?cond%5Broseneki%5D%5B60408950%5D=60408950&cond%5Broseneki%5D%5B60408951%5D=60408951&cond%5Bmonthmoneyroomh%5D=0&cond%5Bhousearea%5D=80&cond%5Bhouseageh%5D=0&cond%5Bwalkminutesh%5D=0&bukken_attr%5Bcategory%5D=chintai&bukken_attr%5Bpref%5D=14"
+]
 
+def fetch_listings(url):
+    listings = []
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
         page.goto(url)
         page.wait_for_timeout(5000)
 
-        items = page.query_selector_all("div.itemList li.item")
-        
+        items = page.query_selector_all(".mod-bukkenList .moduleInner")
+
         for item in items:
-            title = item.query_selector("div.itemTitle a").inner_text().strip()
-            details = item.query_selector("div.itemData").inner_text().strip()
-            link = item.query_selector("div.itemTitle a").get_attribute("href")
+            title_el = item.query_selector(".bukkenName")
+            details_el = item.query_selector(".info")
+            link_el = item.query_selector("a")
+
+            title = title_el.inner_text().strip() if title_el else "Nincs cím"
+            details = details_el.inner_text().strip() if details_el else "Nincs részlet"
+            link = link_el.get_attribute("href") if link_el else "#"
+
+            if not link.startswith("http"):
+                link = f"https://www.homes.co.jp{link}"
 
             listings.append({
                 "title": title,
                 "details": details,
-                "link": f"https://www.rentersnet.jp{link}"
+                "link": link
             })
 
         browser.close()
-
     return listings
 
-def save_to_csv(listings):
-    if listings:
-        df = pd.DataFrame(listings)
+def save_to_csv(all_listings):
+    if all_listings:
+        df = pd.DataFrame(all_listings)
         now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")
         filename = f"listings_{now}.csv"
         df.to_csv(filename, index=False)
@@ -40,8 +49,13 @@ def save_to_csv(listings):
         print("⚠️ Nincs találat a scraper által.")
 
 def main():
-    listings = fetch_listings()
-    save_to_csv(listings)
+    all_listings = []
+    for url in urls:
+        print(f"Oldal ellenőrzése: {url}")
+        listings = fetch_listings(url)
+        all_listings.extend(listings)
+
+    save_to_csv(all_listings)
 
 if __name__ == "__main__":
     main()
