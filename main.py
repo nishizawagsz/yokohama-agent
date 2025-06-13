@@ -18,14 +18,14 @@ def fetch_listings(url):
         items = page.query_selector_all("div.mod-bukkenList div.moduleInner")
 
         for item in items:
-            title_el = item.query_selector("div.bukkenName")
-            price_el = item.query_selector("span.price")
-            location_el = item.query_selector("div.address")
-            link_el = item.query_selector("a")
+            title_el = item.query_selector(".bukkenSpec .bukkenName a")
+            price_el = item.query_selector(".bukkenSpec .price .num")
+            address_el = item.query_selector(".bukkenSpec .address")
+            link_el = item.query_selector(".bukkenSpec .bukkenName a")
 
             title = title_el.inner_text().strip() if title_el else "Nincs cím"
             price = price_el.inner_text().strip() if price_el else "Nincs ár"
-            location = location_el.inner_text().strip() if location_el else "Nincs címadat"
+            address = address_el.inner_text().strip() if address_el else "Nincs címadat"
             link = link_el.get_attribute("href") if link_el else "#"
 
             if not link.startswith("http"):
@@ -34,12 +34,13 @@ def fetch_listings(url):
             listings.append({
                 "title": title,
                 "price": price,
-                "location": location,
+                "address": address,
                 "link": link
             })
 
         browser.close()
     return listings
+
 
 
 def save_to_csv(all_listings):
