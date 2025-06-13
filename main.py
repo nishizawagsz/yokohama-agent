@@ -12,31 +12,37 @@ def fetch_listings(url):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
+        print("Oldal betöltése: ", url)
         page.goto(url)
-        page.wait_for_timeout(5000)
+        # Várunk, hogy minden JS betöltődjön
+        page.wait_for_selector(".mod-bukkenList .moduleInner", timeout=20000)
 
-        items = page.query_selector_all("div.mod-bukkenList div.moduleInner")
+        items = page.query_selector_all(".mod-bukkenList .moduleInner")
+        print(f"Talált {len(items)} találatot az oldalon!")
 
         for item in items:
-            title_el = item.query_selector(".bukkenSpec .bukkenName a")
-            price_el = item.query_selector(".bukkenSpec .price .num")
-            address_el = item.query_selector(".bukkenSpec .address")
-            link_el = item.query_selector(".bukkenSpec .bukkenName a")
+            try:
+                title_el = item.query_selector(".bukkenSpec .bukkenName a")
+                price_el = item.query_selector(".bukkenSpec .price .num")
+                address_el = item.query_selector(".bukkenSpec .address")
+                link_el = item.query_selector(".bukkenSpec .bukkenName a")
 
-            title = title_el.inner_text().strip() if title_el else "Nincs cím"
-            price = price_el.inner_text().strip() if price_el else "Nincs ár"
-            address = address_el.inner_text().strip() if address_el else "Nincs címadat"
-            link = link_el.get_attribute("href") if link_el else "#"
+                title = title_el.inner_text().strip() if title_el else "No title"
+                price = price_el.inner_text().strip() if price_el else "No price"
+                address = address_el.inner_text().strip() if address_el else "No address"
+                link = link_el.get_attribute("href") if link_el else "#"
 
-            if not link.startswith("http"):
-                link = f"https://www.homes.co.jp{link}"
+                if not link.startswith("http"):
+                    link = f"https://www.homes.co.jp{link}"
 
-            listings.append({
-                "title": title,
-                "price": price,
-                "address": address,
-                "link": link
-            })
+                listings.append({
+                    "title": title,
+                    "price": price,
+                    "address": address,
+                    "link": link
+                })
+            except Exception as e:
+                print("Hiba a találat feldolgozásakor:", e)
 
         browser.close()
     return listings
