@@ -14,7 +14,6 @@ def fetch_listings(url):
         page = browser.new_page()
         print("Oldal betöltése: ", url)
         page.goto(url)
-        # Várunk, hogy minden JS betöltődjön
         page.wait_for_selector(".mod-bukkenList .moduleInner", timeout=20000)
 
         items = page.query_selector_all(".mod-bukkenList .moduleInner")
@@ -22,30 +21,49 @@ def fetch_listings(url):
 
         for item in items:
             try:
-                title_el = item.query_selector(".bukkenSpec .bukkenName a")
-                price_el = item.query_selector(".bukkenSpec .price .num")
-                address_el = item.query_selector(".bukkenSpec .address")
-                link_el = item.query_selector(".bukkenSpec .bukkenName a")
-
+                # Lakás neve
+                title_el = item.query_selector("a.prg-detailLink, a.prg-bukkenNameAnchor")
                 title = title_el.inner_text().strip() if title_el else "No title"
-                price = price_el.inner_text().strip() if price_el else "No price"
-                address = address_el.inner_text().strip() if address_el else "No address"
-                link = link_el.get_attribute("href") if link_el else "#"
-
+                link = title_el.get_attribute("href") if title_el else "#"
                 if not link.startswith("http"):
                     link = f"https://www.homes.co.jp{link}"
 
+                # Árak, cím, méret, év
+                price = ""
+                address = ""
+                age = ""
+                size = ""
+
+                table_rows = item.query_selector_all("table tr")
+                for row in table_rows:
+                    th = row.query_selector("th")
+                    td = row.query_selector("td")
+                    if th and td:
+                        label = th.inner_text().strip()
+                        value = td.inner_text().strip()
+                        if "賃料" in label:
+                            price = value
+                        elif "所在地" in label:
+                            address = value
+                        elif "築年数" in label or "築" in label or "年" in label:
+                            age = value
+                        elif "専有面積" in label or "面積" in label:
+                            size = value
+
                 listings.append({
                     "title": title,
+                    "link": link,
                     "price": price,
                     "address": address,
-                    "link": link
+                    "age": age,
+                    "size": size
                 })
             except Exception as e:
                 print("Hiba a találat feldolgozásakor:", e)
 
         browser.close()
     return listings
+
 
 
 
